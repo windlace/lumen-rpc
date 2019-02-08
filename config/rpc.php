@@ -25,13 +25,13 @@ return [
     'config' =>  [
 
         // auto-declaration example:
-        'api-v1-add-user',
+        'my-method',
 
         // overwriting default params example:
-        'user-v1-get-paid-platforms' => [
-            'queueNameFormat' => 'rpc.frontend.get-paid-platforms',
-            'routingKeyFormat' => 'frontend.get-paid-platforms',
-            'exchangeNameFormat' => 'exchange.rpc',
+        'another-method' => [
+            'queueNameFormat' => 'queue.rpc.%s',
+            'routingKeyFormat' => '%s-my-suffix',
+            'exchangeNameFormat' => 'my-custom-rpc-exchange-%s',
             'exchangeType' => 'direct',
         ],
 
