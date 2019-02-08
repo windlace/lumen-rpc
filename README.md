@@ -22,7 +22,6 @@ return [
 Start a server:
 
 ```php
-
 Rpc::listen('my-method', function ($msg) {
     // do work...
     return $msg['number'] * 2;
