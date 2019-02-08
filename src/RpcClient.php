@@ -55,13 +55,14 @@ class RpcClient extends BaseAmqp
 
     /**
      * init a exchange client
-     * @param $exchangeName
+     * @param RpcMethod $rpcMethod
+     * @internal param $exchangeName
      */
-    public function initClient($exchangeName = null)
+    public function initClient(RpcMethod $rpcMethod)
     {
-        $this->queueName = $this->getConsumerTag().'-queue';
+        $this->queueName = $this->getConsumerTag().'-'.$rpcMethod->queueName;
         $this->channel->queue_declare($this->queueName, false, false, true, true);
-        $this->exchangeName = $exchangeName;
+        $this->exchangeName = $rpcMethod->exchangeName;
         $this->requestsCount = 0;
         $this->repliesCount = 0;
         $this->repliesData = [];
@@ -89,7 +90,7 @@ class RpcClient extends BaseAmqp
         );
 
 
-        $this->channel->basic_publish($msg, $this->exchangeName . '-exchange', $routingKey);
+        $this->channel->basic_publish($msg, $this->exchangeName, $routingKey);
         $this->requestsCount++;
     }
 

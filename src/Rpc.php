@@ -190,30 +190,51 @@ class Rpc
             throw new \Exception("connection class does not exist");
         }
     }
+
     /**
      * init a rpc client
-     * @param $exchangeName
+     * @param RpcMethod $rpcMethod
      * @return RpcClient
      */
-    public function initClient($exchangeName)
+    public function initClient(RpcMethod $rpcMethod)
     {
         $connection = $this->getConnection();
         $client = new RpcClient($connection);
-        $client->initClient($exchangeName);
+        $client->initClient($rpcMethod);
         return $client;
     }
+
     /**
      * init a rpc server
-     * @param $exchangeName
+     * @param RpcMethod $rpcMethod
      * @return RpcServer
      */
-    public function initServer($exchangeName)
+    public function initServer(RpcMethod $rpcMethod)
     {
         $connection = $this->getConnection();
         $server = new RpcServer($connection);
-        $server->initServer($exchangeName);
+        $server->initServer($rpcMethod);
         return $server;
     }
+
+    /**
+     * @param string $methodName
+     * @return RpcMethod
+     * @throws \Exception
+     */
+    public function initMethod($methodName)
+    {
+        $availableMethods = $this->availableMethods();
+
+        if (!array_key_exists($methodName, $availableMethods) && !in_array($methodName, $availableMethods)) {
+            throw new \Exception("unknown RPC-method `{$methodName}`");
+        }
+
+        $methodOptions = $availableMethods[$methodName] ?? [];
+
+        return new RpcMethod($methodName, $methodOptions);
+    }
+
     /**
      * @return null|AbstractConnection
      */
@@ -257,14 +278,9 @@ class Rpc
     {
         $rpc = new self($options);
 
-        $availableMethods = $rpc->availableMethods();
-
-        if (!array_key_exists($methodName, $availableMethods)) {
-            throw new \Exception("unknown RPC-method `{$methodName}`");
-        }
-
-        $rpcClient = $rpc->initClient($availableMethods[$methodName]['exchangeName']);
-        $rpcClient->addRequest($messageBody);
+        $rpcMethod = $rpc->initMethod($methodName);
+        $rpcClient = $rpc->initClient($rpcMethod);
+        $rpcClient->addRequest($messageBody, $rpcMethod->getRoutingKey());
 
         $replies = $rpcClient->getReplies();
 
@@ -275,22 +291,18 @@ class Rpc
      * @param $methodName
      *
      * Callable or array
-     * @link http://php.net/manual/en/function.is-callable.php
      * @param $callback
      *
+     * @param array $options
      * @throws \Exception
+     * @link http://php.net/manual/en/function.is-callable.php
      */
-    public static function listen($methodName, $callback)
+    public static function listen($methodName, $callback, array $options = [])
     {
-        $rpc = new self();
+        $rpc = new self($options);
 
-        $availableMethods = $rpc->availableMethods();
-
-        if (!array_key_exists($methodName, $availableMethods)) {
-            throw new \Exception("unknown RPC-method `{$methodName}`");
-        }
-
-        $rpcServer = $rpc->initServer($availableMethods[$methodName]['exchangeName']);
+        $rpcMethod = $rpc->initMethod($methodName);
+        $rpcServer = $rpc->initServer($rpcMethod);
         $rpcServer->setCallback($callback);
 
         $rpcServer->start();

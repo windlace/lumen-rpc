@@ -3,8 +3,33 @@
 namespace Cast\LumenRpc;
 
 use PhpAmqpLib\Message\AMQPMessage;
+use Thumper\BaseConsumer;
 
-class RpcServer extends \Thumper\RpcServer {
+class RpcServer extends BaseConsumer
+{
+    /**
+     * Initialize Server.
+     * @param RpcMethod $rpcMethod
+     */
+    public function initServer(RpcMethod $rpcMethod)
+    {
+        $this->setExchangeOptions($rpcMethod->getExchangeOptions());
+        $this->setQueueOptions($rpcMethod->getQueueOptions());
+        $this->setRoutingKey($rpcMethod->getRoutingKey());
+    }
+
+    /**
+     * Start server.
+     */
+    public function start()
+    {
+        $this->setUpConsumer();
+
+        while (count($this->channel->callbacks)) {
+            $this->channel->wait();
+        }
+    }
+
     /**
      * Process message.
      *
@@ -21,5 +46,24 @@ class RpcServer extends \Thumper\RpcServer {
             $result = $exception;
         }
         $this->sendReply(serialize($result), $message->get('reply_to'), $message->get('correlation_id'));
+    }
+
+    /**
+     * Send reply.
+     *
+     * @param string $result
+     * @param string $client
+     * @param string $correlationId
+     * @throws \PhpAmqpLib\Exception\AMQPInvalidArgumentException
+     */
+    protected function sendReply($result, $client, $correlationId)
+    {
+        $this->setParameter('correlation_id', $correlationId);
+        $reply = new AMQPMessage(
+            $result,
+            $this->getParameters()
+        );
+        $this->channel
+            ->basic_publish($reply, '', $client);
     }
 }

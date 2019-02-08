@@ -1,0 +1,11 @@
+============
+
+cast/lumen-rpc
+
+============
+
+v1.2.0
+- Added class RpcMethod for adjusting RPC-method
+- Changed RpcServer parent class
+- Added ability to set custom configuration for each RPC call or server
+- Removed auth-suffixes "-queue" and "-exchange", now if may be specified at the config file rpc.php
