@@ -3,6 +3,7 @@
 namespace Cast\LumenRpc;
 
 use PhpAmqpLib\Connection\AbstractConnection;
+use Symfony\Component\OptionsResolver\OptionsResolver;
 
 class Rpc
 {
@@ -72,67 +73,105 @@ class Rpc
     protected $amqp_connection = null;
 
     /**
+     * An array of options passed to the constructor.
+     *
+     * @var array Options.
+     */
+    protected $options;
+
+    /**
      * Rpc constructor.
-     * @param $host
-     * @param $port
-     * @param $user
-     * @param $password
-     * @param $vhost
-     * @param bool $insist
-     * @param string $login_method
-     * @param null $login_response
-     * @param string $locale
-     * @param int $connection_timeout
-     * @param int $read_write_timeout
-     * @param null $context
-     * @param bool $keepalive
-     * @param int $heartbeat
+     * @param array $options
      * @throws \Exception
      */
-    public function __construct(
-        $host     = null,
-        $port     = null,
-        $user     = null,
-        $password = null,
-        $vhost    = null,
-        $insist   = false,
-        $login_method = 'AMQPLAIN',
-        $login_response = null,
-        $locale = 'en_US',
-        $connection_timeout = 60,
-        $read_write_timeout = 60,
-        $context = null,
-        $keepalive = true,
-        $heartbeat = 30
-    )
+    public function __construct(array $options = [])
     {
+        $options = self::resolveOptions($options);
 
-        $this->host               = config('queue.connections.rabbitmq.host',     $host);
-        $this->port               = config('queue.connections.rabbitmq.port',     $port);
-        $this->user               = config('queue.connections.rabbitmq.login',    $user);
-        $this->password           = config('queue.connections.rabbitmq.password', $password);
-        $this->vhost              = config('queue.connections.rabbitmq.vhost',    $vhost);
-        $this->insist             = $insist;
-        $this->login_method       = $login_method;
-        $this->login_response     = $login_response;
-        $this->locale             = $locale;
-        $this->connection_timeout = $connection_timeout;
-        $this->read_write_timeout = $read_write_timeout;
-        $this->context            = $context;
-        $this->keepalive          = $keepalive;
-        $this->heartbeat          = $heartbeat;
+        $this->host               = $options['host'];
+        $this->port               = $options['port'];
+        $this->user               = $options['user'];
+        $this->password           = $options['password'];
+        $this->vhost              = $options['vhost'];
+        $this->insist             = $options['insist'];
+        $this->login_method       = $options['login_method'];
+        $this->login_response     = $options['login_response'];
+        $this->locale             = $options['locale'];
+        $this->connection_timeout = $options['connection_timeout'];
+        $this->read_write_timeout = $options['read_write_timeout'];
+        $this->context            = $options['context'];
+        $this->keepalive          = $options['keepalive'];
+        $this->heartbeat          = $options['heartbeat'];
+        $this->options            = $options;
 
-
-        foreach (['host', 'user', 'port'] as $configParam)
-        {
-            if (empty($this->{$configParam})) {
-                throw new \Exception("{$configParam} cannot be empty");
-            }
-        }
         if (!class_exists($this->amqp_connection_class))
         {
             throw new \Exception("connection class does not exist");
         }
+    }
+
+    /**
+     * @param array $options
+     * @return array
+     */
+    public function resolveOptions(array $options = [])
+    {
+        $resolver = new OptionsResolver();
+
+        $resolver
+            ->setRequired([
+                'host',
+                'port',
+                'user',
+            ])
+            ->setDefined([
+                'host',
+                'port',
+                'user',
+                'password',
+                'vhost',
+                'insist',
+                'login_method',
+                'login_response',
+                'locale',
+                'connection_timeout',
+                'read_write_timeout',
+                'context',
+                'keepalive',
+                'heartbeat',
+            ])
+            ->setDefaults([
+                'host'     => config('queue.connections.rabbitmq.host'),
+                'port'     => config('queue.connections.rabbitmq.port'),
+                'user'     => config('queue.connections.rabbitmq.login'),
+                'password' => config('queue.connections.rabbitmq.password'),
+                'vhost'    => config('queue.connections.rabbitmq.vhost'),
+                'insist'   => false,
+                'login_method' => 'AMQPLAIN',
+                'login_response' => null,
+                'locale' => 'en_US',
+                'connection_timeout' => 60,
+                'read_write_timeout' => 60,
+                'context' => null,
+                'keepalive' => true,
+                'heartbeat' => 30,
+            ])
+            ->setAllowedTypes('host', 'string')
+            ->setAllowedTypes('port', 'integer')
+            ->setAllowedTypes('user', 'string')
+            ->setAllowedTypes('password', 'string')
+            ->setAllowedTypes('vhost', 'string')
+            ->setAllowedTypes('insist', 'bool')
+            ->setAllowedTypes('login_method', 'string')
+            ->setAllowedTypes('login_response', [\PhpAmqpLib\Wire\AMQPWriter::class, 'null'])
+            ->setAllowedTypes('locale', 'string')
+            ->setAllowedTypes('connection_timeout', 'integer')
+            ->setAllowedTypes('read_write_timeout', 'integer')
+            ->setAllowedTypes('context', ['resource', 'null'])
+            ->setAllowedTypes('keepalive', 'bool')
+            ->setAllowedTypes('heartbeat', 'integer');
+
+        return $resolver->resolve($options);
     }
 
     /**
@@ -207,15 +246,16 @@ class Rpc
     }
 
     /**
-     * @param   string              $methodName
-     * @param   string|object|mixed $messageBody    Any message object will be serialized
+     * @param   string $methodName
+     * @param   string|object|mixed $messageBody Any message object will be serialized
      *
-     * @throws \Exception
+     * @param array $options
      * @return array
+     * @throws \Exception
      */
-    public static function get($methodName, $messageBody = null)
+    public static function get($methodName, $messageBody = null, array $options = [])
     {
-        $rpc = new self();
+        $rpc = new self($options);
 
         $availableMethods = $rpc->availableMethods();
 
