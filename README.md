@@ -34,7 +34,7 @@ Make some RPC-call from remote:
 ```php
 $res = Rpc::get('my-method', ['number'=>5]);
 
-var_dump($res['data']);
+var_dump($res);
 ```
 
 Will gets:
