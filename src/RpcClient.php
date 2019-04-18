@@ -54,6 +54,11 @@ class RpcClient extends BaseAmqp
     protected $requestTimeout = 0;
 
     /**
+     * @var bool
+     */
+    protected $serialize;
+
+    /**
      * init a exchange client
      * @param RpcMethod $rpcMethod
      * @internal param $exchangeName
@@ -63,6 +68,7 @@ class RpcClient extends BaseAmqp
         $this->queueName = $this->getConsumerTag().'-'.$rpcMethod->queueName;
         $this->channel->queue_declare($this->queueName, false, false, true, true);
         $this->exchangeName = $rpcMethod->exchangeName;
+        $this->serialize = $rpcMethod->serialize;
         $this->requestsCount = 0;
         $this->repliesCount = 0;
         $this->repliesData = [];
@@ -81,7 +87,9 @@ class RpcClient extends BaseAmqp
             $correlationId =  uniqid();
         }
 
-        $msg = new AMQPMessage(serialize($msgBody),
+        $msgBody = $this->serialize ? serialize($msgBody) : $msgBody;
+
+        $msg = new AMQPMessage($msgBody,
             [
                 'content_type' => 'text/plain',
                 'reply_to' => $this->queueName,
@@ -127,7 +135,7 @@ class RpcClient extends BaseAmqp
     public function processMessage($msg)
     {
         $this->repliesCount++;
-        $reply = unserialize($msg->body);
+        $reply = $this->serialize ? unserialize($msg->body) : $msg->body;
 
         if ($this->callback === null) {
             $this->repliesData[] = $reply;

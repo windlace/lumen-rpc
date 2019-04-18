@@ -37,6 +37,11 @@ class RpcMethod
     protected $options;
 
     /**
+     * @var bool
+     */
+    public $serialize;
+
+    /**
      * RpcMethod constructor.
      * @param string $methodName
      * @param array $options
@@ -48,6 +53,7 @@ class RpcMethod
         $this->exchangeType = $options['exchangeType'];
         $this->queueName    = $this->formatQueueName($methodName, $options);
         $this->routing_key  = $this->formatRoutingKey($methodName, $options);
+        $this->serialize    = $options['serialize'];
         $this->methodName   = $methodName;
         $this->options      = $options;
     }
@@ -79,6 +85,14 @@ class RpcMethod
     public function getRoutingKey()
     {
         return $this->routing_key;
+    }
+
+    /**
+     * @return string
+     */
+    public function getSerialize()
+    {
+        return $this->serialize;
     }
 
     /**
@@ -125,17 +139,20 @@ class RpcMethod
                 'exchangeType',
                 'queueNameFormat',
                 'routingKey',
+                'serialize',
             ])
             ->setDefaults([
                 'exchangeNameFormat' => config('rpc.exchange-name-format', 'rpc.%s-exchange'),
                 'exchangeType'       => 'direct',
                 'queueNameFormat'    => config('rpc.queue-name-format', 'rpc.%s-queue'),
-                'routingKeyFormat'    => config('rpc.routing-key-format', 'rpc.%s'),
+                'routingKeyFormat'   => config('rpc.routing-key-format', 'rpc.%s'),
+                'serialize'          => true,
             ])
             ->setAllowedTypes('exchangeNameFormat', 'string')
             ->setAllowedTypes('exchangeType', 'string')
             ->setAllowedTypes('queueNameFormat', 'string')
-            ->setAllowedTypes('routingKeyFormat', 'string');
+            ->setAllowedTypes('routingKeyFormat', 'string')
+            ->setAllowedTypes('serialize', 'bool');
 
         return $resolver->resolve($options);
     }
