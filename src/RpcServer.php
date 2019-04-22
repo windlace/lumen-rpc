@@ -8,6 +8,11 @@ use Thumper\BaseConsumer;
 class RpcServer extends BaseConsumer
 {
     /**
+     * @var bool
+     */
+    protected $serialize;
+
+    /**
      * Initialize Server.
      * @param RpcMethod $rpcMethod
      */
@@ -16,6 +21,7 @@ class RpcServer extends BaseConsumer
         $this->setExchangeOptions($rpcMethod->getExchangeOptions());
         $this->setQueueOptions($rpcMethod->getQueueOptions());
         $this->setRoutingKey($rpcMethod->getRoutingKey());
+        $this->serialize = $rpcMethod->getSerialize();
     }
 
     /**
@@ -40,12 +46,16 @@ class RpcServer extends BaseConsumer
     public function processMessage(AMQPMessage $message)
     {
         try {
-            $result = call_user_func($this->callback, unserialize($message->body));
+            $msg = $this->serialize ? unserialize($message->body) : $message->body;
+            $result = call_user_func($this->callback, $msg);
             $message->delivery_info['channel']->basic_ack($message->delivery_info['delivery_tag']);
         } catch (\Exception $exception) {
             $result = $exception;
         }
-        $this->sendReply(serialize($result), $message->get('reply_to'), $message->get('correlation_id'));
+
+        $result = $this->serialize ? serialize($result) : $result;
+
+        $this->sendReply($result, $message->get('reply_to'), $message->get('correlation_id'));
     }
 
     /**
