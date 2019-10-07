@@ -9,11 +9,16 @@ return [
     |
     | %s means config key
     |
+    | All defaults are optional.
+    | @see Cast\LumenRpc\RpcMethod\resolveOptions
+    |
     */
 
-    'exchange-name-format' => 'rpc.%s-exchange',
-    'queue-name-format'    => 'rpc.%s-queue',
-    'routing-key-format'   => '%s',
+    'exchange-name-format'    => 'rpc.%s-exchange',
+    'queue-name-format'       => 'rpc.%s-queue',
+    'routing-key-format'      => '%s',
+    'default-request-timeout' => 0, // in seconds (0 - infinity)
+    'consumer-tag-auto'       => false,
 
     /*
     |--------------------------------------------------------------------------

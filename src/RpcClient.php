@@ -65,10 +65,17 @@ class RpcClient extends BaseAmqp
      */
     public function initClient(RpcMethod $rpcMethod)
     {
-        $this->queueName = $this->getConsumerTag().'-'.$rpcMethod->queueName;
-        $this->channel->queue_declare($this->queueName, false, false, true, true);
+        [$consumerTag] = $this->channel->queue_declare(
+            $rpcMethod->consumerTagAuto ? '' : $rpcMethod->getConsumerTag(),
+            false,
+            false,
+            true,
+            true
+        );
+        $this->queueName = $consumerTag;
         $this->exchangeName = $rpcMethod->exchangeName;
         $this->serialize = $rpcMethod->serialize;
+        $this->requestTimeout = $rpcMethod->requestTimeout;
         $this->requestsCount = 0;
         $this->repliesCount = 0;
         $this->repliesData = [];
@@ -84,7 +91,7 @@ class RpcClient extends BaseAmqp
     {
         if ($correlationId === null)
         {
-            $correlationId =  uniqid();
+            $correlationId = uniqid();
         }
 
         $msgBody = $this->serialize ? serialize($msgBody) : $msgBody;
@@ -96,7 +103,6 @@ class RpcClient extends BaseAmqp
                 'correlation_id' => $correlationId
             ]
         );
-
 
         $this->channel->basic_publish($msg, $this->exchangeName, $routingKey);
         $this->requestsCount++;
@@ -217,10 +223,10 @@ class RpcClient extends BaseAmqp
     }
 
     /**
-     * @return string
+     * @param int $timeout
      */
-    protected function getConsumerTag()
+    public function setTimeout($timeout)
     {
-        return 'PHPPROCESS_' . getmypid() . '_CALL_' . bin2hex(random_bytes(8));
+        $this->requestTimeout = $timeout;
     }
 }

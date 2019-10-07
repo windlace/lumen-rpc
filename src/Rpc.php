@@ -219,10 +219,11 @@ class Rpc
 
     /**
      * @param string $methodName
+     * @param array $methodOptions
      * @return RpcMethod
      * @throws \Exception
      */
-    public function initMethod($methodName)
+    public function initMethod($methodName, $methodOptions = [])
     {
         $availableMethods = $this->availableMethods();
 
@@ -230,7 +231,7 @@ class Rpc
             throw new \Exception("unknown RPC-method `{$methodName}`");
         }
 
-        $methodOptions = $availableMethods[$methodName] ?? [];
+        $methodOptions = $availableMethods[$methodName] ?? $methodOptions;
 
         return new RpcMethod($methodName, $methodOptions);
     }

@@ -42,20 +42,34 @@ class RpcMethod
     public $serialize;
 
     /**
+     * Switching between native consumer tag algo and custom one.
+     * @var bool
+     */
+    public $consumerTagAuto;
+
+    /**
+     * timeout of RPC-request (in seconds)
+     * @var int
+     */
+    public $requestTimeout = 0;
+
+    /**
      * RpcMethod constructor.
      * @param string $methodName
      * @param array $options
      */
     public function __construct($methodName, array $options = [])
     {
-        $options            = $this->resolveOptions($options);
-        $this->exchangeName = $this->formatExchangeName($methodName, $options);
-        $this->exchangeType = $options['exchangeType'];
-        $this->queueName    = $this->formatQueueName($methodName, $options);
-        $this->routing_key  = $this->formatRoutingKey($methodName, $options);
-        $this->serialize    = $options['serialize'];
-        $this->methodName   = $methodName;
-        $this->options      = $options;
+        $options                     = $this->resolveOptions($options);
+        $this->exchangeName          = $this->formatExchangeName($methodName, $options);
+        $this->exchangeType          = $options['exchangeType'];
+        $this->queueName             = $this->formatQueueName($methodName, $options);
+        $this->routing_key           = $this->formatRoutingKey($methodName, $options);
+        $this->serialize             = $options['serialize'];
+        $this->requestTimeout        = $options['requestTimeout'];
+        $this->consumerTagAuto       = $options['consumerTagAuto'];
+        $this->methodName            = $methodName;
+        $this->options               = $options;
     }
 
     /**
@@ -140,20 +154,34 @@ class RpcMethod
                 'queueNameFormat',
                 'routingKey',
                 'serialize',
+                'requestTimeout',
+                'consumerTagAuto',
             ])
             ->setDefaults([
-                'exchangeNameFormat' => config('rpc.exchange-name-format', 'rpc.%s-exchange'),
-                'exchangeType'       => 'direct',
-                'queueNameFormat'    => config('rpc.queue-name-format', 'rpc.%s-queue'),
-                'routingKeyFormat'   => config('rpc.routing-key-format', 'rpc.%s'),
-                'serialize'          => true,
+                'exchangeNameFormat'    => config('rpc.exchange-name-format', 'rpc.%s-exchange'),
+                'exchangeType'          => 'direct',
+                'queueNameFormat'       => config('rpc.queue-name-format', 'rpc.%s-queue'),
+                'routingKeyFormat'      => config('rpc.routing-key-format', 'rpc.%s'),
+                'serialize'             => true,
+                'requestTimeout'        => config('rpc.default-request-timeout', 0),
+                'consumerTagAuto'       => config('rpc.consumer-tag-auto', false),
             ])
             ->setAllowedTypes('exchangeNameFormat', 'string')
             ->setAllowedTypes('exchangeType', 'string')
             ->setAllowedTypes('queueNameFormat', 'string')
             ->setAllowedTypes('routingKeyFormat', 'string')
-            ->setAllowedTypes('serialize', 'bool');
+            ->setAllowedTypes('serialize', 'bool')
+            ->setAllowedTypes('requestTimeout', 'integer')
+            ->setAllowedTypes('consumerTagAuto', 'bool');
 
         return $resolver->resolve($options);
+    }
+
+    /**
+     * @return string
+     */
+    public function getConsumerTag()
+    {
+        return 'PHPPROCESS_' . getmypid() . '_CALL_' . bin2hex(random_bytes(8)).'-'.$this->queueName;
     }
 }
